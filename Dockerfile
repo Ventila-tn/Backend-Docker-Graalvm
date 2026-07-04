@@ -1,36 +1,17 @@
-# Multi-stage Dockerfile for GraalVM Native Image
-# Stage 1: Build native executable with GraalVM
+# Dockerfile pour Render - Exécutable Native Pré-compilé
+# 
+# IMPORTANT: Vous devez d'abord compiler l'exécutable natif en local:
+#   1. ./build-native.sh (Linux/macOS) OU build-native.bat (Windows)
+#   2. Copier backend/target/backend vers Backend-Docker-Graalvm/backend
+#   3. Deployer sur Render
+#
+# Démarrage: <2s | Mémoire: 50-100MB | Build Render: <30s
 
-FROM ghcr.io/graalvm/native-image-community:21 AS builder
-
-# Install Maven prerequisites
-RUN microdnf install -y findutils
-
-WORKDIR /build
-
-# Copy Maven wrapper and pom.xml first for better caching
-COPY backend/mvnw backend/mvnw.cmd backend/pom.xml ./
-COPY backend/.mvn ./.mvn
-
-# Ensure mvnw is executable (fixes issues when repo checked out on Windows)
-RUN chmod +x ./mvnw
-
-# Download dependencies (cached layer)
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
-COPY backend/src ./src
-
-# Build native image
-# This takes 5-10 minutes but produces a tiny, fast executable
-RUN ./mvnw -Pnative native:compile -DskipTests
-
-# Stage 2: Create minimal runtime image
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
-# Install essential runtime libraries + curl (needed for HEALTHCHECK)
+# Install only essential runtime libraries
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -38,8 +19,9 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the native executable from builder
-COPY --from=builder /build/target/backend ./backend
+# Copy the pre-built native executable
+# IMPORTANT: L'exécutable doit être présent dans le repo
+COPY backend ./backend
 
 # Make executable
 RUN chmod +x ./backend
@@ -52,11 +34,9 @@ USER appuser
 
 EXPOSE 8080
 
-# Health check — must target the container itself (localhost), not a public URL
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # Run the native executable
-# server.port is bound to Render's $PORT env var via application.properties:
-#   server.port=${PORT:8080}
 ENTRYPOINT ["./backend"]

@@ -1,13 +1,4 @@
-# Ignore build artifacts and cache
-**/target/
-**/.mvn/wrapper/maven-wrapper.jar
-**/node_modules/
-**/.git/
-**/.gitignore
-**/README.md
-**/INSTRUCTIONS_RENDER.md
-
-# Keep only backend source code
-!backend/
-backend/target/
-backend/.mvn/wrapper/maven-wrapper.jar
+# Ignore everything except the native executable and Dockerfile
+*
+!backend
+!Dockerfile

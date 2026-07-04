@@ -1,0 +1,5 @@
+backend/target/
+backend/src/
+backend/pom.xml
+*.class
+*.log

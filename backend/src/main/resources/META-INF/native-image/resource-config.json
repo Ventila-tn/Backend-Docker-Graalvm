@@ -1,0 +1,25 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\QMETA-INF/spring.factories\\E"
+      },
+      {
+        "pattern": "\\Qapplication.properties\\E"
+      },
+      {
+        "pattern": "\\Qapplication-native.properties\\E"
+      },
+      {
+        "pattern": "\\Qapplication-prod.properties\\E"
+      },
+      {
+        "pattern": "\\Qorg/hibernate/\\E.*"
+      },
+      {
+        "pattern": "\\Qorg/springframework/\\E.*"
+      }
+    ]
+  },
+  "bundles": []
+}

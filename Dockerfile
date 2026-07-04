@@ -1,7 +1,29 @@
-# Dockerfile pour GraalVM Native Image - Exécutable Pré-compilé
-# L'exécutable natif est compilé en local et copié dans ce dossier
-# Build Render: <30s | Démarrage: <2s | Mémoire: 50-100MB
+# Multi-stage Dockerfile pour GraalVM Native Image
+# Build l'exécutable natif directement dans Docker
+# Démarrage: <2s | Mémoire: 50-100MB | Build: 5-10 minutes
 
+# Stage 1: Build avec GraalVM
+FROM ghcr.io/graalvm/native-image-community:21 AS builder
+
+# Install Maven
+RUN microdnf install -y maven findutils
+
+WORKDIR /build
+
+# Copy pom.xml first for better caching
+COPY backend/pom.xml ./
+
+# Download dependencies (cached layer)
+RUN mvn dependency:go-offline -B || true
+
+# Copy source code
+COPY backend/src ./src
+
+# Build native image
+# This takes 5-10 minutes but produces a tiny, fast executable
+RUN mvn -Pnative native:compile -DskipTests
+
+# Stage 2: Create minimal runtime image
 FROM debian:bookworm-slim
 
 WORKDIR /app
@@ -15,7 +37,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the native executable from builder
-COPY backend ./backend
+COPY --from=builder /build/target/backend ./backend
 
 # Make executable
 RUN chmod +x ./backend

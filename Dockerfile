@@ -5,27 +5,23 @@
 # Stage 1: Build avec GraalVM
 FROM ghcr.io/graalvm/native-image-community:21 AS builder
 
-# Install Maven prerequisites
-RUN microdnf install -y findutils
+# Install Maven
+RUN microdnf install -y maven findutils
 
 WORKDIR /build
 
-# Copy Maven wrapper and pom.xml first for better caching
-COPY backend/mvnw backend/mvnw.cmd backend/pom.xml ./
-COPY backend/.mvn ./.mvn
-
-# Ensure mvnw is executable
-RUN chmod +x ./mvnw
+# Copy pom.xml first for better caching
+COPY backend/pom.xml ./
 
 # Download dependencies (cached layer)
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B || true
 
 # Copy source code
 COPY backend/src ./src
 
 # Build native image
 # This takes 5-10 minutes but produces a tiny, fast executable
-RUN ./mvnw -Pnative native:compile -DskipTests
+RUN mvn -Pnative native:compile -DskipTests
 
 # Stage 2: Create minimal runtime image
 FROM debian:bookworm-slim
